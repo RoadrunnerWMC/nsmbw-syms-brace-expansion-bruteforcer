@@ -159,7 +159,12 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
     apply_square_bracket_word_list_substitution(&mut line);
     let line = line;
 
-    let mut iter = brace_expand_iter(&line, escaping_enabled);
+    let iter = brace_expand_iter(&line, escaping_enabled);
+    if let Err(e) = iter {
+        println!("Parsing failure: {:?}", e);
+        return;
+    }
+    let mut iter = iter.unwrap();
     let num_expansions = iter.num_expansions();
 
     if num_expansions > ONLY_ECHO_FIRST {
