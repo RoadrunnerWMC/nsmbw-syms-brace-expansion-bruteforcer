@@ -341,6 +341,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if line == "r" {
                     db = load_symbol_database_from_path(symbol_map_path, true)?;
                 } else {
+                    // It's a good idea to flush the history here, since
+                    // otherwise, if the pattern is particularly long
+                    // and the user decides to Ctrl+C it, they'd lose
+                    // that history entry
+                    rl.save_history("history.txt")?;
                     process_line_as_pattern(&line, &mut db);
                 }
             },
