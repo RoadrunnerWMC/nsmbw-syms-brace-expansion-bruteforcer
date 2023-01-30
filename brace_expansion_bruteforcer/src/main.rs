@@ -126,7 +126,7 @@ fn apply_square_bracket_word_list_substitution(s: &mut String) {
             let mut word_list_pattern = "{".to_owned();
             if let Ok(file) = File::open(&word_list_name) {
                 for word in BufReader::new(file).lines().flatten() {
-                    word_list_pattern.push_str(&word);
+                    word_list_pattern.push_str(&word.replace("\\", "\\\\").replace(",", "\\,").replace("{", "\\{").replace("}", "\\}"));
                     word_list_pattern.push(',');
                 }
                 word_list_pattern.replace_range(word_list_pattern.len()-1..word_list_pattern.len(), "}");
@@ -320,9 +320,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut db = load_symbol_database_from_path(symbol_map_path, true)?;
 
     println!("Commands:");
-    println!("- Ctrl+C, Ctrl+D: exit");
+    println!("- Ctrl+C / Ctrl+D / q / quit / e / exit: exit");
     println!("- r / reload: reload the symbol database");
-    println!("- e on / e off: enable/disable backslash escapes in patterns (turned OFF by default) (enabling lets you include literal braces and commas in patterns, but also means you have to escape any literal backslashes)");
+    println!("- escapes on / escapes off: enable/disable backslash escapes in patterns (turned OFF by default).");
+    println!("    - Enabling lets you include literal braces and commas in patterns, but also means you have to escape any literal backslashes.");
     println!("- (anything else): run as a bruteforce pattern");
     println!();
     println!("Pattern format:");
@@ -330,6 +331,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("    - Empty elements are OK: \"{{a,b,}}\" -> \"a\", \"b\", \"\".");
     println!("- \"P\" + square brackets (\"P[abc]\") will be replaced by a length prefix (\"3abc\").");
     println!("- \"W\" + square brackets (\"W[abc]\") will expand to the contents of word list file \"abc.txt\" (one word per line).");
+    println!("    - Commas, braces and backslashes will be escaped, so this is best used with backslash-escapes enabled.");
     println!("- You can use the following shorthand aliases to easily search for symbols with common signatures:");
     let shorthands = make_pattern_shorthands();
     let mut shorthands: Vec<(&String, &String)> = shorthands.iter().collect();
@@ -346,12 +348,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                if line == "r" || line == "reload" {
+                if line == "q" || line == "quit" || line == "e" || line == "exit" {
+                    break
+                } else if line == "r" || line == "reload" {
                     db = load_symbol_database_from_path(symbol_map_path, true)?;
-                } else if line == "e on" {
+                } else if line == "escapes on" {
                     println!("Backslash-escaping enabled.");
                     escaping_enabled = true;
-                } else if line == "e off" {
+                } else if line == "escapes off" {
                     println!("Backslash-escaping disabled.");
                     escaping_enabled = false;
                 } else {
