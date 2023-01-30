@@ -1,0 +1,10 @@
+[package]
+name = "nvidia_demangle-sys"
+version = "0.1.0"
+edition = "2021"
+links = "nvidia_demangle"
+
+[dependencies]
+
+[build-dependencies]
+cc = "1.0"

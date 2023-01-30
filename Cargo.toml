@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+    "brace_expansion_bruteforcer",
+    "brace_expand_2",
+    "djb2_utils",
+    "nvidia_demangle",
+    "nvidia_demangle-sys",
+    "symbol_map_formats"
+]

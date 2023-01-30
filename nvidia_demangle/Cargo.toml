@@ -1,0 +1,8 @@
+[package]
+name = "nvidia_demangle"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+nvidia_demangle-sys = { path = "../nvidia_demangle-sys" }

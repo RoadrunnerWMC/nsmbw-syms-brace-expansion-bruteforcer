@@ -1,0 +1,13 @@
+[package]
+name = "brace_expansion_bruteforcer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+brace_expand_2 = { path = "../brace_expand_2" }
+djb2_utils = { path = "../djb2_utils" }
+lazy_static = "1.4"
+nvidia_demangle = { path = "../nvidia_demangle" }
+regex = "1.7"
+rustyline = "10.1"
+symbol_map_formats = { path = "../symbol_map_formats" }
