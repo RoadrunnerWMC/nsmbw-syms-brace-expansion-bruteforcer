@@ -16,7 +16,8 @@ use symbol_map_formats::{BasicSymbolMap, load_symbol_map_from_path};
 
 
 const ONLY_ECHO_FIRST: usize = 50;
-const ALSO_ECHO_EVERY: usize = 2_000_000;
+const ECHO_INTERVAL: usize = 2_000_000;
+const ECHO_INTERVAL_MAX_FUDGE: usize = 100;
 
 
 fn make_pattern_shorthands() -> HashMap<String, String> {
@@ -175,7 +176,7 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
 
     let mut sym_mangled = String::with_capacity(iter.max_expansion_length());
     let mut next_i = 0;
-    let mut echo_interval_jitter = 0;
+    let mut echo_interval_fudge = 0;
     let mut newly_found_syms = Vec::new();
     while iter.next_into(&mut sym_mangled) {
         // (doing it this way so we can safely `continue` in the middle
@@ -183,7 +184,7 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
         let i = next_i;
         next_i += 1;
 
-        let mut force_echo = i < ONLY_ECHO_FIRST || (i + echo_interval_jitter) % ALSO_ECHO_EVERY == 0;
+        let mut force_echo = i < ONLY_ECHO_FIRST || (i + echo_interval_fudge) % ECHO_INTERVAL == 0;
 
         apply_square_bracket_length_prefix_substitution(&mut sym_mangled);
 
@@ -232,7 +233,10 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
             // sub-pattern in the brace-expansion output sequence, which
             // causes us to only show some types of outputs and not a
             // more representative sample.
-            echo_interval_jitter += 1;
+            echo_interval_fudge += 1;
+            if echo_interval_fudge > ECHO_INTERVAL_MAX_FUDGE {
+                echo_interval_fudge = 0;
+            }
         }
 
         if let Some(new_unknown_syms) = new_unknown_syms {
