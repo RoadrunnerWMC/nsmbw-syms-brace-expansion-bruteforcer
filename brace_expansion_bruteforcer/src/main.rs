@@ -154,12 +154,12 @@ fn apply_pattern_shorthands(s: &str) -> String {
 }
 
 
-fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase) {
+fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled: bool) {
     let mut line = apply_pattern_shorthands(line);
     apply_square_bracket_word_list_substitution(&mut line);
     let line = line;
 
-    let mut iter = brace_expand_iter(&line, false);
+    let mut iter = brace_expand_iter(&line, escaping_enabled);
     let num_expansions = iter.num_expansions();
 
     if num_expansions > ONLY_ECHO_FIRST {
@@ -316,7 +316,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Commands:");
     println!("- Ctrl+C, Ctrl+D: exit");
-    println!("- r: reload the symbol database");
+    println!("- r / reload: reload the symbol database");
+    println!("- e on / e off: enable/disable backslash escapes in patterns (turned OFF by default) (enabling lets you include literal braces and commas in patterns, but also means you have to escape any literal backslashes)");
     println!("- (anything else): run as a bruteforce pattern");
     println!();
     println!("Pattern format:");
@@ -333,20 +334,28 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     println!();
 
+    let mut escaping_enabled: bool = false;
+
     loop {
         let readline = rl.readline("sym> ");
         match readline {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                if line == "r" {
+                if line == "r" || line == "reload" {
                     db = load_symbol_database_from_path(symbol_map_path, true)?;
+                } else if line == "e on" {
+                    println!("Backslash-escaping enabled.");
+                    escaping_enabled = true;
+                } else if line == "e off" {
+                    println!("Backslash-escaping disabled.");
+                    escaping_enabled = false;
                 } else {
                     // It's a good idea to flush the history here, since
                     // otherwise, if the pattern is particularly long
                     // and the user decides to Ctrl+C it, they'd lose
                     // that history entry
                     rl.save_history("history.txt")?;
-                    process_line_as_pattern(&line, &mut db);
+                    process_line_as_pattern(&line, &mut db, escaping_enabled);
                 }
             },
             Err(ReadlineError::Interrupted) => {
