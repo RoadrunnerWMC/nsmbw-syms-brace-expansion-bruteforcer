@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs::OpenOptions;
-use std::io::Write;
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufRead, Write};
 use std::path::Path;
 use std::time::Instant;
 
@@ -89,9 +89,9 @@ impl SymbolDatabase {
 }
 
 
-/// Replaces any "[" "]" pairs with length prefixes, in-place.
+/// Replaces any "P[" "]" pairs with length prefixes, in-place.
 fn apply_square_bracket_length_prefix_substitution(s: &mut String) {
-    // We search for "[" in reverse and "]" forward, instead
+    // We search for "P[" in reverse and "]" forward, instead
     // of the other way around, because we have to process
     // these from innermost to outermost if they're nested
     // (or else we'll insert incorrect length values)
@@ -99,13 +99,45 @@ fn apply_square_bracket_length_prefix_substitution(s: &mut String) {
     // TODO: it should be possible to optimize this further (go over
     // the string in one pass instead of multiple)
 
-    while let Some(open_bracket_byte_idx) = s.find('[') {
+    while let Some(open_bracket_byte_idx) = s.find("P[") {
         if let Some(close_bracket_byte_idx) = s.rfind(']') {
-            let substring_length = close_bracket_byte_idx - open_bracket_byte_idx - 1;
+            let substring_length = close_bracket_byte_idx - open_bracket_byte_idx - 2;
             s.remove(close_bracket_byte_idx);
             s.replace_range(
-                open_bracket_byte_idx..open_bracket_byte_idx+1,
+                open_bracket_byte_idx..open_bracket_byte_idx+2,
                 &substring_length.to_string());
+        } else {
+            // TODO: um...?
+            break;
+        }
+    }
+}
+
+
+/// Replaces any "W[" "]" pairs with word lists, in-place.
+fn apply_square_bracket_word_list_substitution(s: &mut String) {
+    while let Some(open_bracket_byte_idx) = s.find("W[") {
+        if let Some(close_bracket_byte_idx) = s[open_bracket_byte_idx+2..].find(']') {
+            let close_bracket_byte_idx = open_bracket_byte_idx + 2 + close_bracket_byte_idx;
+            let word_list_name = &s[open_bracket_byte_idx+2..close_bracket_byte_idx];
+            let mut word_list_name = word_list_name.to_owned();
+            word_list_name.push_str(".txt");
+
+            let mut word_list_pattern = "{".to_owned();
+            if let Ok(file) = File::open(&word_list_name) {
+                for word in BufReader::new(file).lines().flatten() {
+                    word_list_pattern.push_str(&word);
+                    word_list_pattern.push(',');
+                }
+                word_list_pattern.replace_range(word_list_pattern.len()-1..word_list_pattern.len(), "}");
+
+                s.replace_range(
+                    open_bracket_byte_idx..close_bracket_byte_idx+1,
+                    &word_list_pattern);
+            } else {
+                println!("WARNING: Couldn't open {word_list_name}");
+                break;
+            }
         } else {
             // TODO: um...?
             break;
@@ -119,20 +151,13 @@ fn apply_square_bracket_length_prefix_substitution(s: &mut String) {
 fn apply_pattern_shorthands(s: &str) -> String {
     let s = s.to_owned();
     make_pattern_shorthands().iter().fold(s, |acc, kv| acc.replace(kv.0, kv.1))
-    // let s2 = None;
-    // for name, replacement in make_pattern_shorthands() {
-    //     if let Some(s2_inner) = s2 {
-    //         s2 = Some(Some(s.replace(name, replacement)))
-    //     }
-    //     s2 = ;
-    // }
-    // s.clear();
-    // s.push_str(s_new);
 }
 
 
 fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase) {
-    let line = apply_pattern_shorthands(line);
+    let mut line = apply_pattern_shorthands(line);
+    apply_square_bracket_word_list_substitution(&mut line);
+    let line = line;
 
     let mut iter = brace_expand_iter(&line, false);
     let num_expansions = iter.num_expansions();
@@ -297,7 +322,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Pattern format:");
     println!("- Curly braces (\"{{a,b,c}}\") expand to multiple strings (\"a\", \"b\", \"c\").");
     println!("    - Empty elements are OK: \"{{a,b,}}\" -> \"a\", \"b\", \"\".");
-    println!("- Square brackets (\"[abc]\") will be replaced by a length prefix (\"3abc\").");
+    println!("- \"P\" + square brackets (\"P[abc]\") will be replaced by a length prefix (\"3abc\").");
+    println!("- \"W\" + square brackets (\"W[abc]\") will expand to the contents of word list file \"abc.txt\" (one word per line).");
     println!("- You can use the following shorthand aliases to easily search for symbols with common signatures:");
     let shorthands = make_pattern_shorthands();
     let mut shorthands: Vec<(&String, &String)> = shorthands.iter().collect();
