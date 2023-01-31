@@ -367,7 +367,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     // otherwise, if the pattern is particularly long
                     // and the user decides to Ctrl+C it, they'd lose
                     // that history entry
-                    rl.save_history("history.txt")?;
+                    rl.append_history("history.txt")?;
                     process_line_as_pattern(&line, &mut db, escaping_enabled);
                 }
             },
