@@ -87,6 +87,20 @@ impl SymbolDatabase {
         }
         Self{contents: map}
     }
+
+    fn unknown_contents(&self) -> HashMap<u32, HashMap<u32, Vec<SymbolDatabaseEntry>>> {
+        let mut new_map: HashMap<u32, HashMap<u32, Vec<SymbolDatabaseEntry>>> = HashMap::new();
+        for (mangled_hash, sub_map) in self.contents.iter() {
+            for (demangled_hash, entries) in sub_map.iter() {
+                for entry in entries {
+                    if entry.mangled_name.is_none() {
+                        new_map.entry(*mangled_hash).or_default().entry(*demangled_hash).or_default().push(entry.clone());
+                    }
+                }
+            }
+        }
+        new_map
+    }
 }
 
 
@@ -156,6 +170,8 @@ fn apply_pattern_shorthands(s: &str) -> String {
 
 
 fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled: bool) {
+    let unknown_db_contents = db.unknown_contents();
+
     let mut line = apply_pattern_shorthands(line);
     apply_square_bracket_word_list_substitution(&mut line);
     let line = line;
@@ -190,7 +206,14 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
 
         let hash_mangled = hash_djb2(sym_mangled.as_bytes(), DJB2_HASH_SEED);
 
-        let matching_mangled_db = db.contents.get(&hash_mangled);
+        // if forcing echo, use the full db so we can report "known"
+        // symbols -- otherwise, we're not going to report those anyway,
+        // so use the smaller version to be more efficient
+        let matching_mangled_db = if force_echo {
+            db.contents.get(&hash_mangled)
+        } else {
+            unknown_db_contents.get(&hash_mangled)
+        };
 
         // Important optimization
         if matching_mangled_db.is_none() && !force_echo {
