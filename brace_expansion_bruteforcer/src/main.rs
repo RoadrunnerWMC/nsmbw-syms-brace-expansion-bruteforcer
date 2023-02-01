@@ -21,11 +21,11 @@ const ECHO_INTERVAL_MAX_FUDGE: usize = 100;
 
 
 fn make_pattern_shorthands() -> HashMap<String, String> {
-    let primitives = "{,P,R,C}{{,U,S}{c,s,i,l},f,b}";
+    let primitives = "{,P,R}{,C}{{,U,S}{c,s,i,l},f,b}";
     HashMap::from([
-        ("END1".to_owned(), format!("{{C,}}F{{v,{primitives}}}", )),
-        ("END2".to_owned(), format!("{{C,}}F{{v,{primitives},{primitives}{primitives}}}")),
-        ("END3".to_owned(), format!("{{C,}}F{{v,{primitives},{primitives}{primitives},{primitives}{primitives}{primitives}}}")),
+        ("END1".to_owned(), format!("{{,C}}F{{v,{primitives}}}", )),
+        ("END2".to_owned(), format!("{{,C}}F{{v,{primitives},{primitives}{primitives}}}")),
+        ("END3".to_owned(), format!("{{,C}}F{{v,{primitives},{primitives}{primitives},{primitives}{primitives}{primitives}}}")),
     ])
 }
 
