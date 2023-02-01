@@ -174,6 +174,7 @@ fn process_line_as_pattern(line: &str, db: &mut SymbolDatabase, escaping_enabled
 
     let mut line = apply_pattern_shorthands(line);
     apply_square_bracket_word_list_substitution(&mut line);
+    line.retain(|c| !c.is_whitespace());
     let line = line;
 
     let iter = brace_expand_iter(&line, escaping_enabled);
@@ -359,6 +360,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("- \"P\" + square brackets (\"P[abc]\") will be replaced by a length prefix (\"3abc\").");
     println!("- \"W\" + square brackets (\"W[abc]\") will expand to the contents of word list file \"abc.txt\" (one word per line).");
     println!("    - Commas, braces and backslashes will be escaped, so this is best used with backslash-escapes enabled.");
+    println!("- Linebreaks and other whitespace are removed/ignored");
     println!("- You can use the following shorthand aliases to easily search for symbols with common signatures:");
     let shorthands = make_pattern_shorthands();
     let mut shorthands: Vec<(&String, &String)> = shorthands.iter().collect();
